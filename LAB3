@@ -1,0 +1,152 @@
+using System;
+using System.Collections.Generic;
+
+namespace ExpenseManagement
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            int menuChoice;
+            List<ExpenseRecord> expenseList = new List<ExpenseRecord>();
+
+            do
+            {
+                Console.WriteLine("\n=================================");
+                Console.WriteLine("      EXPENSE TRACKER SYSTEM");
+                Console.WriteLine("=================================");
+                Console.WriteLine("1. Add Expense");
+                Console.WriteLine("2. View All Expenses");
+                Console.WriteLine("3. View Total Expense");
+                Console.WriteLine("4. Exit");
+                Console.WriteLine("---------------------------------");
+
+                try
+                {
+                    Console.Write("Enter your choice: ");
+                    menuChoice = Convert.ToInt32(Console.ReadLine());
+
+                    switch (menuChoice)
+                    {
+                        case 1:
+                            try
+                            {
+                                ExpenseRecord newExpense = new ExpenseRecord();
+                                newExpense.ReadExpense();
+
+                                expenseList.Add(newExpense);
+
+                                Console.WriteLine("\nExpense added successfully.");
+                            }
+                            catch (FormatException)
+                            {
+                                Console.WriteLine("Invalid numeric input.");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
+                            finally
+                            {
+                                Console.WriteLine("Expense entry completed.");
+                            }
+                            break;
+
+                        case 2:
+
+                            Console.WriteLine("\n------ Expense List ------");
+
+                            if (expenseList.Count == 0)
+                            {
+                                Console.WriteLine("No expense records found.");
+                            }
+                            else
+                            {
+                                foreach (ExpenseRecord item in expenseList)
+                                {
+                                    item.ShowExpense();
+                                }
+                            }
+
+                            break;
+
+                        case 3:
+
+                            double totalExpense = 0;
+
+                            foreach (ExpenseRecord item in expenseList)
+                            {
+                                totalExpense += item.Amount;
+                            }
+
+                            Console.WriteLine("\nTotal Expense = ₹" + totalExpense);
+
+                            break;
+
+                        case 4:
+
+                            Console.WriteLine("Thank you for using Expense Tracker.");
+                            break;
+
+                        default:
+
+                            Console.WriteLine("Invalid choice. Please try again.");
+                            break;
+                    }
+                }
+                catch (FormatException)
+                {
+                    Console.WriteLine("Please enter a valid menu option.");
+                    menuChoice = 0;
+                }
+
+            } while (menuChoice != 4);
+        }
+    }
+
+    class ExpenseRecord
+    {
+        public int ExpenseId;
+        public string CategoryName;
+        public double Amount;
+        public string PaymentType;
+        public DateTime ExpenseDate;
+
+        // Method to accept expense details
+
+        public void ReadExpense()
+        {
+            Console.Write("Enter Expense ID: ");
+            ExpenseId = Convert.ToInt32(Console.ReadLine());
+
+            Console.Write("Enter Expense Category: ");
+            CategoryName = Console.ReadLine();
+
+            Console.Write("Enter Expense Amount: ");
+            Amount = Convert.ToDouble(Console.ReadLine());
+
+            if (Amount <= 0)
+            {
+                throw new Exception("Expense amount must be greater than zero.");
+            }
+
+            Console.Write("Enter Payment Mode (Cash/UPI/Card): ");
+            PaymentType = Console.ReadLine();
+
+            ExpenseDate = DateTime.Now;
+        }
+
+        // Method to display expense details
+
+        public void ShowExpense()
+        {
+            Console.WriteLine("------------------------------------");
+            Console.WriteLine("Expense ID      : " + ExpenseId);
+            Console.WriteLine("Category        : " + CategoryName);
+            Console.WriteLine("Amount          : ₹" + Amount);
+            Console.WriteLine("Payment Mode    : " + PaymentType);
+            Console.WriteLine("Expense Date    : " + ExpenseDate);
+            Console.WriteLine("------------------------------------");
+        }
+    }
+}
