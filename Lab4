@@ -1,0 +1,226 @@
+
+<%@ Page Language="C#" AutoEventWireup="true"
+    CodeBehind="WebForm1.aspx.cs"
+    Inherits="WebApplication1.WebForm1" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head runat="server">
+    <title>Online Event Registration</title>
+</head>
+
+<body>
+
+    <form id="form1" runat="server">
+
+        <table border="1" cellpadding="8" cellspacing="0" align="center">
+
+            <tr>
+                <td colspan="2" align="center">
+                    <h2>Online Event Registration</h2>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    <asp:Label ID="Label1" runat="server"
+                        Text="Name"></asp:Label>
+                </td>
+
+                <td>
+                    <asp:TextBox ID="TextBox2" runat="server"></asp:TextBox>
+
+                    <asp:RequiredFieldValidator
+                        ID="RequiredFieldValidator1" runat="server"
+                        ControlToValidate="TextBox2" ErrorMessage="Name cannot be blank"
+                        ForeColor="Red">
+                    </asp:RequiredFieldValidator>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Email
+                </td>
+
+                <td>
+                    <asp:TextBox ID="TextBox3" runat="server"></asp:TextBox>
+
+                    <asp:RequiredFieldValidator
+                        ID="RequiredFieldValidator2" runat="server"
+                        ControlToValidate="TextBox3" ErrorMessage="Email is Required"
+                        ForeColor="Red">
+                    </asp:RequiredFieldValidator>
+
+                    <asp:RegularExpressionValidator
+                        ID="RegularExpressionValidator1" runat="server"
+                        ControlToValidate="TextBox3" ErrorMessage="Enter a valid email"
+                        ForeColor="Red" ValidationExpression="\w+([-.+']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*">
+                    </asp:RegularExpressionValidator>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Contact No.
+                </td>
+
+                <td>
+                    <asp:TextBox ID="TextBox4" runat="server" MaxLength="10">
+                    </asp:TextBox>
+
+                    <asp:RequiredFieldValidator
+                        ID="RequiredFieldValidator3" runat="server"
+                        ControlToValidate="TextBox4" ErrorMessage="Contact No. is Required"
+                        ForeColor="Red">
+                    </asp:RequiredFieldValidator>
+
+                    <asp:RegularExpressionValidator
+                        ID="RegularExpressionValidator2" runat="server"
+                        ControlToValidate="TextBox4" ErrorMessage="Enter 10 digit contact number"
+                        ForeColor="Red" ValidationExpression="[0-9]{10}">
+                    </asp:RegularExpressionValidator>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    College
+                </td>
+
+                <td>
+                    <asp:TextBox ID="TextBox5" runat="server"></asp:TextBox>
+
+                    <asp:RequiredFieldValidator
+                        ID="RequiredFieldValidator4" runat="server"
+                        ControlToValidate="TextBox5" ErrorMessage="College Name is Required"
+                        ForeColor="Red">
+                    </asp:RequiredFieldValidator>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Department
+                </td>
+
+                <td>
+                    <asp:RadioButton
+                        ID="RadioButton6" runat="server" Text="Computer"
+                        GroupName="dept" />
+                    <br />
+
+                    <asp:RadioButton
+                        ID="RadioButton7" runat="server" Text="IT" GroupName="dept" />
+                    <br />
+
+                    <asp:RadioButton
+                        ID="RadioButton8" runat="server" Text="MECH" GroupName="dept" />
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Event
+                </td>
+
+                <td>
+                    <asp:DropDownList
+                        ID="DropDownList1" runat="server">
+
+                        <asp:ListItem>Select Event</asp:ListItem>
+                        <asp:ListItem>MECH</asp:ListItem>
+                        <asp:ListItem>CE</asp:ListItem>
+                        <asp:ListItem>IT</asp:ListItem>
+
+                    </asp:DropDownList>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Gender
+                </td>
+
+                <td>
+                    <asp:RadioButton
+                        ID="RadioButton4" runat="server" Text="Male" GroupName="gender"
+                    />
+                    &nbsp;&nbsp;
+
+                    <asp:RadioButton ID="RadioButton5" runat="server" Text="Female"
+                        GroupName="gender" />
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Skills
+                </td>
+
+                <td>
+                    <asp:CheckBox
+                        ID="CheckBox1" runat="server" Text="C language" />
+
+                    &nbsp;&nbsp;
+
+                    <asp:CheckBox
+                        ID="CheckBox2" runat="server" Text="JAVA" />
+
+                    &nbsp;&nbsp;
+
+                    <asp:CheckBox
+                        ID="CheckBox3" runat="server" Text="C#" />
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    Address
+                </td>
+
+                <td>
+                    <asp:TextBox
+                        ID="TextBox6" runat="server" TextMode="MultiLine" Rows="5"
+                        Columns="30">
+                    </asp:TextBox>
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="2">
+                    <asp:CheckBox
+                        ID="CheckBox7" runat="server" Text="I accept terms and conditions" />
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="2" align="center">
+
+                    <asp:Button
+                        ID="Button1" runat="server" Text="Submit"
+                        OnClick="Button1_Click" />
+
+                    &nbsp;&nbsp;
+
+                    <asp:Button
+                        ID="Button2" runat="server" Text="Cancel" />
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="2" align="center">
+                    <asp:Label
+                        ID="Label2" runat="server" ForeColor="Blue">
+                    </asp:Label>
+
+                </td>
+            </tr>
+
+        </table>
+    </form>
+</body>
+</html>
+
