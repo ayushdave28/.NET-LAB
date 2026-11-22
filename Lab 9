@@ -1,0 +1,410 @@
+<%@ Page Language="C#" AutoEventWireup="true"
+CodeBehind="Default.aspx.cs"
+Inherits="P9_PlacementDashboard.Default" %>
+
+<!DOCTYPE html>
+
+<html>
+<head runat="server">
+<title>Placement Dashboard</title>
+
+<style>
+body {
+font-family: Arial;
+background: #f4f6f9;
+margin: 30px;
+}
+
+h1 {
+color: #243b55;
+}
+
+table {
+background: white;
+
+border-collapse: collapse;
+}
+
+td, th {
+padding: 12px;
+border: 1px solid #ddd;
+}
+
+.summary {
+margin-bottom: 25px;
+}
+
+.card {
+display: inline-block;
+background: white;
+padding: 15px;
+margin: 8px;
+border-radius: 8px;
+min-width: 130px;
+}
+
+.placed {
+color: green;
+font-weight: bold;
+}
+
+.unplaced {
+color: red;
+font-weight: bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<form id="form1" runat="server">
+
+<h1>Placement Dashboard</h1>
+
+<hr />
+
+<h3>Placement Summary</h3>
+
+<div class="summary">
+
+<div class="card">
+Total Students<br />
+<asp:Label ID="lblTotal" runat="server" />
+</div>
+
+<div class="card">
+Placed Students<br />
+<asp:Label ID="lblPlaced" runat="server" />
+</div>
+
+<div class="card">
+Unplaced Students<br />
+<asp:Label ID="lblUnplaced" runat="server" />
+</div>
+
+<div class="card">
+Placement Percentage<br />
+
+<asp:Label ID="lblPercentage" runat="server" />
+</div>
+
+<div class="card">
+Highest Package<br />
+<asp:Label ID="lblHighestPackage" runat="server" />
+</div>
+
+<div class="card">
+Average Package<br />
+<asp:Label ID="lblAveragePackage" runat="server" />
+</div>
+
+</div>
+
+<h3>Student Placement Records</h3>
+
+<asp:GridView ID="gvPlacements"
+runat="server"
+AutoGenerateColumns="False"
+EmptyDataText="No student records found."
+BorderWidth="1"
+CellPadding="8">
+
+<Columns>
+
+<asp:BoundField DataField="StudentId"
+HeaderText="Student ID" />
+
+<asp:BoundField DataField="CompanyName"
+HeaderText="Company" />
+
+<asp:BoundField DataField="JobRole"
+HeaderText="Job Role" />
+
+<asp:BoundField DataField="PackageLPA"
+HeaderText="Package (LPA)"
+DataFormatString="{0:N2}" />
+
+<asp:TemplateField HeaderText="Status">
+<ItemTemplate>
+
+<asp:Label runat="server"
+Text='<%# Convert.ToBoolean(Eval("IsPlaced")) ? "Placed" : "Not Placed" %>'
+CssClass='<%# Convert.ToBoolean(Eval("IsPlaced")) ? "placed" : "unplaced" %>'
+/>
+
+</ItemTemplate>
+</asp:TemplateField>
+
+</Columns>
+
+</asp:GridView>
+
+<br />
+
+<asp:HyperLink ID="lnkCompanies"
+runat="server"
+NavigateUrl="~/Companies.aspx">
+
+View Company Summary
+
+    </asp:HyperLink>
+
+</form>
+
+</body>
+</html>
+
+using System;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace P9_PlacementDashboard
+{
+public partial class Default : System.Web.UI.Page
+{
+string cs = ConfigurationManager
+.ConnectionStrings["PlacementDB"].ConnectionString;
+
+protected void Page_Load(object sender, EventArgs e)
+{
+if (!IsPostBack)
+{
+LoadSummary();
+LoadPlacements();
+}
+}
+
+private void LoadSummary()
+
+{
+using (SqlConnection con = new SqlConnection(cs))
+{
+con.Open();
+
+SqlCommand cmd = new SqlCommand(
+"SELECT COUNT(*) FROM Students", con);
+
+lblTotal.Text = cmd.ExecuteScalar().ToString();
+
+cmd.CommandText =
+"SELECT COUNT(*) FROM Students WHERE IsPlaced = 1";
+
+lblPlaced.Text = cmd.ExecuteScalar().ToString();
+
+cmd.CommandText =
+"SELECT COUNT(*) FROM Students WHERE IsPlaced = 0";
+
+lblUnplaced.Text = cmd.ExecuteScalar().ToString();
+
+cmd.CommandText =
+"SELECT MAX(PackageLPA) FROM Students WHERE IsPlaced = 1";
+
+object highest = cmd.ExecuteScalar();
+
+decimal highestPackage =
+highest == DBNull.Value ? 0 : Convert.ToDecimal(highest);
+
+lblHighestPackage.Text =
+highestPackage.ToString("N2") + " LPA";
+
+cmd.CommandText =
+"SELECT AVG(PackageLPA) FROM Students WHERE IsPlaced = 1";
+
+object average = cmd.ExecuteScalar();
+
+decimal averagePackage =
+average == DBNull.Value ? 0 : Convert.ToDecimal(average);
+
+lblAveragePackage.Text =
+averagePackage.ToString("N2") + " LPA";
+
+int total = Convert.ToInt32(lblTotal.Text);
+
+int placed = Convert.ToInt32(lblPlaced.Text);
+
+decimal percentage = total == 0
+? 0
+: (decimal)placed * 100 / total;
+
+lblPercentage.Text =
+percentage.ToString("N2") + "%";
+}
+}
+
+private void LoadPlacements()
+{
+using (SqlConnection con = new SqlConnection(cs))
+{
+string query = "SELECT * FROM Students";
+
+SqlDataAdapter da =
+
+new SqlDataAdapter(query, con);
+
+DataTable dt = new DataTable();
+
+da.Fill(dt);
+
+gvPlacements.DataSource = dt;
+
+gvPlacements.DataBind();
+}
+}
+}
+}
+
+<%@ Page Language="C#" AutoEventWireup="true"
+CodeBehind="Companies.aspx.cs"
+Inherits="P9_PlacementDashboard.Companies" %>
+
+<!DOCTYPE html>
+
+<html>
+<head runat="server">
+<title>Company Placement Details</title>
+
+<style>
+body {
+font-family: Arial;
+background: #f4f6f9;
+
+margin: 30px;
+}
+
+.company-card {
+background: white;
+padding: 15px;
+margin: 10px;
+border-radius: 8px;
+display: inline-block;
+}
+</style>
+</head>
+
+<body>
+
+<form id="form1" runat="server">
+
+<h2>Placement Records</h2>
+
+<asp:Repeater ID="rptCompanies" runat="server">
+
+<HeaderTemplate>
+
+<table border="1" cellpadding="8">
+
+<tr>
+<th>Placement ID</th>
+<th>Student ID</th>
+<th>Company</th>
+<th>Job Role</th>
+<th>Package (LPA)</th>
+
+</tr>
+
+</HeaderTemplate>
+
+<ItemTemplate>
+
+<tr>
+<td><%# Eval("PlacementId") %></td>
+<td><%# Eval("StudentId") %></td>
+<td><%# Eval("CompanyName") %></td>
+<td><%# Eval("JobRole") %></td>
+<td><%# Eval("PackageLPA") %></td>
+</tr>
+
+</ItemTemplate>
+
+<FooterTemplate>
+
+</table>
+
+</FooterTemplate>
+
+</asp:Repeater>
+
+<br /><br />
+
+<h3>Company Details Using DataList</h3>
+
+<asp:DataList ID="dlPlacements" runat="server">
+
+<ItemTemplate>
+
+<div class="company-card">
+
+<b>Company:</b>
+<%# Eval("CompanyName") %>
+<br />
+
+<b>Job Role:</b>
+<%# Eval("JobRole") %>
+<br />
+
+<b>Package:</b>
+<%# Eval("PackageLPA") %> LPA
+
+</div>
+
+</ItemTemplate>
+
+</asp:DataList>
+
+<br />
+
+<a href="Default.aspx">Back to Dashboard</a>
+
+</form>
+
+</body>
+</html>
+
+using System;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace P9_PlacementDashboard
+{
+public partial class Companies : System.Web.UI.Page
+{
+string cs = ConfigurationManager
+.ConnectionStrings["PlacementDB"].ConnectionString;
+
+protected void Page_Load(object sender, EventArgs e)
+{
+if (!IsPostBack)
+{
+LoadCompanies();
+}
+}
+
+private void LoadCompanies()
+{
+using (SqlConnection con = new SqlConnection(cs))
+{
+string query = @"
+SELECT PlacementId, StudentId,
+CompanyName, JobRole, PackageLPA
+FROM Students
+WHERE IsPlaced = 1";
+
+SqlDataAdapter da =
+new SqlDataAdapter(query, con);
+
+DataTable dt = new DataTable();
+
+da.Fill(dt);
+
+rptCompanies.DataSource = dt;
+rptCompanies.DataBind();
+
+dlPlacements.DataSource = dt;
+dlPlacements.DataBind();
+}
+}
+}
+}
