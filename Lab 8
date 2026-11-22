@@ -1,0 +1,427 @@
+using System.ComponentModel.DataAnnotations;
+namespace InventoryManagementModule.Models
+{
+public class Product
+{
+public int ProductId { get; set; }
+[Required(ErrorMessage = "Product name is required.")]
+[StringLength(100)]
+public string ProductName { get; set; }
+[Range(0, int.MaxValue, ErrorMessage = "Quantity cannot be
+negative.")] public int Quantity { get; set; }
+[Range(typeof(decimal), "0.01",
+"99999999.99", ErrorMessage = "Price must
+be greater than zero.")] public decimal
+Price { get; set; }
+}
+
+Using System;
+Using System.Collections.Generic; using System.Configuration; using System.Data;
+Using System.Data.SqlClient; using System.Linq;
+
+Using System.Web.Mvc;
+Using InventoryManagementModule.Models;
+Namespace InventoryManagementModule.Controllers
+{
+Public class ProductController : Controller
+{
+Private readonly string cs =
+ConfigurationManager.ConnectionStrings[“InventoryDB”].ConnectionString;
+
+// READ: Display products and search by name public ActionResult Index(string search)
+
+{
+List<Product> products = new List<Product>();
+Using (SqlConnection con = new SqlConnection(cs))
+{
+String query = @”
+SELECT ProductId, ProductName, Quantity, Price FROM Products
+WHERE (@Search IS NULL OR ProductName LIKE @Search) ORDER BY ProductId”;
+
+Using (SqlCommand cmd = new SqlCommand(query, con))
+{
+Cmd.Parameters.Add(“@Search”, SqlDbType.NVarChar, 100).Value
+string.IsNullOrWhiteSpace(search)? (object)DBNull.Value: “%” + search.Trim() + “%”;Con.Open();
+
+Using (SqlDataReader dr = cmd.ExecuteReader())
+{
+While (dr.Read())
+{
+
+Products.Add(new Product
+{
+ProductId = Convert.ToInt32(dr[“ProductId”]), ProductName =
+Convert.ToString(dr[“ProductName”]), Quantity = Convert.ToInt32(dr[“Quantity”]),
+Price = Convert.ToDecimal(dr[“Price”])
+});
+}
+}
+}
+}
+
+ViewBag.Search = search; ViewBag.TotalInventoryValue = products.Sum(p => p.Quantity * p.Price);
+Return View(products);
+}
+// CREATE: Display the form [HttpGet]
+
+Public ActionResult Create()
+{
+Return View();
+}
+
+// CREATE: Save a new product [HttpPost] [ValidateAntiForgeryToken]
+
+Public ActionResult Create(Product p)
+{
+If (!ModelState.IsValid) return View(p);
+
+Using (SqlConnection con = new SqlConnection(cs))
+{
+String query = @”
+INSERT INTO Products (ProductName, Quantity, Price) VALUES (@ProductName, @Quantity,
+@Price)”;
+
+Using (SqlCommand cmd = new SqlCommand(query, con))
+{
+Cmd.Parameters.Add(“@ProductName”, SqlDbType.NVarChar, 100)
+.Value = p.ProductName.Trim();
+Cmd.Parameters.Add(“@Quantity”,  SqlDbType.Int)
+.Value = p.Quantity;
+Cmd.Parameters.Add(“@Price”, SqlDbType.Decimal)
+.Value = p.Price;
+
+Cmd.Parameters[“@Price”].Precision  =  10;
+Cmd.Parameters[“@Price”].Scale  =  2;
+Con.Open(); cmd.ExecuteNonQuery();
+}
+}
+Return RedirectToAction(“Index”);
+}
+
+// UPDATE: Display the existing product [HttpGet]
+
+Public ActionResult Edit(int id)
+{
+Product p = null;
+Using (SqlConnection con = new SqlConnection(cs))
+{
+String query = @”
+SELECT ProductId, ProductName, Quantity, Price FROM Products
+WHERE ProductId = @ProductId”;
+Using (SqlCommand cmd = new SqlCommand(query, con))
+
+{
+cmd.Parameters.Add("@ProductId", SqlDbType.Int).Value = id;
+con.Open();
+using (SqlDataReader dr = cmd.ExecuteReader())
+{
+if (dr.Read())
+{
+p = new Product
+{
+ProductId = Convert.ToInt32(dr["ProductId"]),
+ProductName = Convert.ToString(dr["ProductName"]),
+Quantity = Convert.ToInt32(dr["Quantity"]),
+Price = Convert.ToDecimal(dr["Price"])
+};
+}
+}
+}
+}
+if (p == null)
+return HttpNotFound();
+return View(p);
+}
+// UPDATE: Save changes [HttpPost]
+[ValidateAntiForgeryToken]
+public ActionResult Edit(Product p)
+
+{
+if (!ModelState.IsValid) return
+View(p);
+using (SqlConnection con = new SqlConnection(cs))
+{
+string query = @"
+UPDATE Products
+SET ProductName = @ProductName,
+Quantity = @Quantity,
+Price = @Price
+WHERE ProductId = @ProductId";
+using (SqlCommand cmd = new SqlCommand(query, con))
+{
+cmd.Parameters.Add("@ProductId", SqlDbType.Int)
+.Value = p.ProductId;
+cmd.Parameters.Add("@ProductName", SqlDbType.NVarChar, 100)
+.Value = p.ProductName.Trim();
+cmd.Parameters.Add("@Quantity",  SqlDbType.Int)
+.Value = p.Quantity;
+cmd.Parameters.Add("@Price", SqlDbType.Decimal)
+.Value = p.Price;
+cmd.Parameters["@Price"].Precision  =  10;
+cmd.Parameters["@Price"].Scale  =  2;
+con.Open();
+int rowsAffected = cmd.ExecuteNonQuery();
+if (rowsAffected == 0) return
+HttpNotFound();
+
+}
+}
+return RedirectToAction("Index");
+}
+// DELETE: Remove a product
+[HttpPost]
+[ValidateAntiForgeryToken]
+public ActionResult Delete(int id)
+{
+using (SqlConnection con = new SqlConnection(cs))
+{
+string query =
+"DELETE FROM Products WHERE ProductId = @ProductId";
+using (SqlCommand cmd = new SqlCommand(query, con))
+{
+cmd.Parameters.Add("@ProductId", SqlDbType.Int).Value = id;
+con.Open();
+cmd.ExecuteNonQuery();
+}
+}
+return RedirectToAction("Index");
+}}
+}
+@model InventoryManagementModule.Models.Product
+@{
+Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Add Product</title>
+</head>
+<body>
+<h2>Add New Product</h2>
+
+@using (Html.BeginForm())
+{
+@Html.AntiForgeryToken()
+@Html.ValidationSummary(true, "", new { @style = "color:red" })
+<p>
+Product Name:
+<br />
+@Html.TextBoxFor(m => m.ProductName)
+@Html.ValidationMessageFor(m => m.ProductName)
+</p>
+<p>
+Quantity:
+<br />
+@Html.TextBoxFor(m => m.Quantity, new { type = "number", min = "0" })
+@Html.ValidationMessageFor(m => m.Quantity)
+</p>
+<p> Price:
+<br />
+@Html.TextBoxFor(m => m.Price, new { type = "number", min = "0.01", step = "0.01" })
+@Html.ValidationMessageFor(m  =>  m.Price)
+</p>
+
+<button type="submit">Save Product</button>
+}
+<p>
+@Html.ActionLink("Back to Inventory", "Index")
+</p>
+
+</body>
+</html>
+@model InventoryManagementModule.Models.Product
+@{
+Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Edit Product</title>
+</head>
+<body>
+<h2>Edit Product</h2>
+@using (Html.BeginForm())
+{
+@Html.AntiForgeryToken()
+@Html.HiddenFor(m  =>  m.ProductId)
+@Html.ValidationSummary(true, "", new { @style = "color:red" })
+<p>
+Product Name:
+<br />
+@Html.TextBoxFor(m => m.ProductName)
+
+@Html.ValidationMessageFor(m => m.ProductName)
+</p>
+<p>
+Quantity:
+<br />
+@Html.TextBoxFor(m => m.Quantity, new { type = "number", min = "0" })
+@Html.ValidationMessageFor(m => m.Quantity)
+</p>
+<p> Price:
+<br />
+@Html.TextBoxFor(m => m.Price, new { type = "number", min = "0.01", step = "0.01" })
+@Html.ValidationMessageFor(m  =>  m.Price)
+</p>
+<button type="submit">Update Product</button>
+}
+<p>
+@Html.ActionLink("Back to Inventory", "Index")
+</p>
+</body>
+</html>
+@model List<InventoryManagementModule.Models.Product>
+@{
+Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<title>Inventory Management</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+margin:30px;
+background: #f4f6f9;
+}
+h2 {color: #243b55;}
+
+table {
+border-collapse: collapse;
+width: 100%;
+background: white;
+margin-top: 20px;
+}
+th, td {
+border: 1px solid #ddd;
+padding: 12px;
+text-align: left;
+}
+th {
+background: #243b55;
+color: white;
+}
+.button {
+padding: 8px 12px;
+background: #2878b5;
+color: white;
+text-decoration: none; border:
+
+none;
+cursor: pointer;
+border-radius: 4px;
+}
+.delete { background:
+#d9534f;
+}
+
+.summary {
+background: white;
+padding: 15px;
+margin-top: 20px;
+border-left: 5px solid #2878b5;
+}
+input {
+padding:8px;}
+</style>
+</head>
+<body>
+<h2>Inventory Management System</h2>
+<p>
+<a  class="button"  href="@Url.Action("Create",  "Product")">
++ Add New Product
+</a>
+</p>
+<form method="get" action="@Url.Action("Index", "Product")">
+<input type="text"
+name="search"
+value="@ViewBag.Search"
+placeholder="Search product name..." />
+
+<button class="button" type="submit">Search</button>
+<a class="button" href="@Url.Action("Index", "Product")"> Show All
+</a>
+</form>
+<div class="summary">
+<strong>Products displayed:</strong> @Model.Count
+<br /><br />
+<strong>Total inventory value:</strong>
+@(((decimal)ViewBag.TotalInventoryValue).ToString("C"))
+</div>
+<table>
+<thead>
+<tr>
+<th>Product ID</th>
+<th>Product Name</th>
+<th>Quantity</th>
+<th>Price</th>
+<th>Stock Value</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+@foreach (var item in Model)
+{
+<tr>
+<td>@item.ProductId</td>
+<td>@item.ProductName</td>
+<td>@item.Quantity</td>
+<td>@item.Price.ToString("C")</td>
+<td>@((item.Quantity * item.Price).ToString("C"))</td>
+
+<td>
+<a class="button"
+href="@Url.Action("Edit", "Product",
+new { id = item.ProductId })"> Edit
+</a>
+@using (Html.BeginForm("Delete", "Product", new {
+id = item.ProductId }, FormMethod.Post))
+{
+@Html.AntiForgeryToken()
+<button class="button delete"
+type="submit"
+onclick="return confirm('Delete this product?');"> Delete
+</button>
+}
+</td>
+</tr>
+}
+@if (Model.Count == 0)
+
+{
+<tr>
+<td colspan="6">No products found.</td>
+</tr>
+}
+</tbody>
+</table>
+</body>
+</html>
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web; using
+System.Web.Mvc;
+using System.Web.Routing;
+namespace InventoryManagementModule
+{
+public class RouteConfig
+{
+public static void RegisterRoutes(RouteCollection routes)
+{
+routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+routes.MapRoute(
+
+name: "Default",
+url: "{controller}/{action}/{id}",
+defaults:new{controller = "Product",action = "Index",id = UrlParameter.Optional }
+);
+}
+}
+}
