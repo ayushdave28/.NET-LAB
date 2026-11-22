@@ -1,0 +1,577 @@
+EXPERIMENT 11 — SMART CAMPUS SERVICE PORTAL
+Code transcribed from pages 3–14 of the supplied PDF.
+
+===== Models/ServiceRequest.cs =====
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace SmartCampusPortal.Models
+{
+    public class ServiceRequest
+    {
+        public int RequestId { get; set; }
+
+        [Required]
+        public string StudentName { get; set; }
+
+        [Required]
+        public string Department { get; set; }
+
+        [Required]
+        public string ServiceType { get; set; }
+
+        [Required]
+        public string Description { get; set; }
+
+        public string Priority { get; set; }
+        public string Status { get; set; }
+
+        public DateTime RequestDate { get; set; }
+    }
+}
+
+===== DAL/ServiceRequestDAL.cs =====
+using SmartCampusPortal.Models;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+
+namespace SmartCampusPortal.DAL
+{
+    public class ServiceRequestDAL
+    {
+        private readonly string cs =
+            ConfigurationManager.ConnectionStrings[
+                "CampusConnection"].ConnectionString;
+
+        // Get all requests
+        public List<ServiceRequest> GetAll()
+        {
+            List<ServiceRequest> list =
+                new List<ServiceRequest>();
+
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = "SELECT * FROM ServiceRequests ORDER BY RequestId ASC";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+
+                con.Open();
+
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    list.Add(new ServiceRequest
+                    {
+                        RequestId = Convert.ToInt32(
+                            dr["RequestId"]),
+
+                        StudentName = dr["StudentName"].ToString(),
+
+                        Department = dr["Department"].ToString(),
+
+                        ServiceType = dr["ServiceType"].ToString(),
+
+                        Description = dr["Description"].ToString(),
+
+                        Priority = dr["Priority"].ToString(),
+
+                        Status = dr["Status"].ToString(),
+
+                        RequestDate = Convert.ToDateTime(
+                            dr["RequestDate"])
+                    });
+                }
+            }
+
+            return list;
+        }
+
+        // Insert new request
+        public void Insert(ServiceRequest request)
+        {
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = @"
+                    INSERT INTO ServiceRequests
+                    (StudentName, Department, ServiceType,
+                     Description, Priority, Status)
+                    VALUES
+                    (@StudentName, @Department, @ServiceType,
+                     @Description, @Priority, @Status)";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+
+                cmd.Parameters.AddWithValue(
+                    "@StudentName", request.StudentName);
+
+                cmd.Parameters.AddWithValue(
+                    "@Department", request.Department);
+
+                cmd.Parameters.AddWithValue(
+                    "@ServiceType", request.ServiceType);
+
+                cmd.Parameters.AddWithValue(
+                    "@Description", request.Description);
+
+                cmd.Parameters.AddWithValue(
+                    "@Priority", request.Priority ?? "Medium");
+
+                cmd.Parameters.AddWithValue(
+                    "@Status", "Pending");
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // Update request status
+        public void UpdateStatus(int id, string status)
+        {
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = @"
+                    UPDATE ServiceRequests
+                    SET Status = @Status
+                    WHERE RequestId = @RequestId";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@Status", status);
+                cmd.Parameters.AddWithValue("@RequestId", id);
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+    }
+}
+
+===== Controllers/ServiceRequestController.cs =====
+using SmartCampusPortal.DAL;
+using SmartCampusPortal.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace SmartCampusPortal.Controllers
+{
+    public class ServiceRequestController : Controller
+    {
+        ServiceRequestDAL dal = new ServiceRequestDAL();
+
+        // GET: ServiceRequest
+        public ActionResult Index()
+        {
+            return View(dal.GetAll());
+        }
+
+        // GET: ServiceRequest/Create
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: ServiceRequest/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(ServiceRequest request)
+        {
+            if (ModelState.IsValid)
+            {
+                dal.Insert(request);
+                return RedirectToAction("Index");
+            }
+
+            return View(request);
+        }
+
+        // GET: ServiceRequest/UpdateStatus/1
+        public ActionResult UpdateStatus(int id)
+        {
+            ViewBag.RequestId = id;
+            return View();
+        }
+
+        // POST: ServiceRequest/UpdateStatus
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult UpdateStatus(int id, string status)
+        {
+            dal.UpdateStatus(id, status);
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+===== Controllers/ServiceApiController.cs =====
+using SmartCampusPortal.DAL;
+using SmartCampusPortal.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Http;
+
+namespace SmartCampusPortal.Controllers
+{
+    public class ServiceApiController : ApiController
+    {
+        ServiceRequestDAL dal = new ServiceRequestDAL();
+
+        // GET: api/ServiceApi
+        [HttpGet]
+        public IHttpActionResult GetRequests()
+        {
+            return Ok(dal.GetAll());
+        }
+
+        // POST: api/ServiceApi
+        [HttpPost]
+        public IHttpActionResult CreateRequest(
+            ServiceRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            dal.Insert(request);
+            return Ok("Service request created successfully");
+        }
+
+        // PUT: api/ServiceApi/UpdateStatus/1
+        [HttpPut]
+        [Route("api/ServiceApi/UpdateStatus/{id:int}")]
+        public IHttpActionResult UpdateStatus(
+            int id, [FromBody] string status)
+        {
+            dal.UpdateStatus(id, status);
+            return Ok("Status updated successfully");
+        }
+    }
+}
+
+===== App_Start/RouteConfig.cs =====
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace SmartCampusPortal
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "ServiceRequest", action = "Index", id =
+                    UrlParameter.Optional }
+            );
+        }
+    }
+}
+
+===== App_Start/WebApiConfig.cs =====
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Http;
+
+namespace SmartCampusPortal
+{
+    public static class WebApiConfig
+    {
+        public static void Register(HttpConfiguration config)
+        {
+            config.MapHttpAttributeRoutes();
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { id = RouteParameter.Optional }
+            );
+        }
+    }
+}
+
+===== Views/ServiceRequest/Index.cshtml =====
+@model IEnumerable<SmartCampusPortal.Models.ServiceRequest>
+
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Campus Service Requests</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background-color: #fdfdfd; color: #333; }
+        h2 { color: #003366; border-bottom: 2px solid #003366; padding-bottom: 8px; }
+        .btn-create { display: inline-block; padding: 8px 16px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
+        .btn-create:hover { background-color: #004c99; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ccc; padding: 10px 12px; text-align: left; }
+        th { background-color: #003366; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .status-Pending { color: #d9534f; font-weight: bold; }
+        .status-In-Progress { color: #f0ad4e; font-weight: bold; }
+        .status-Completed { color: #5cb85c; font-weight: bold; }
+        .action-link { color: #0066cc; text-decoration: none; font-weight: 600; }
+        .action-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h2>Smart Campus Service Requests</h2>
+
+    <p>
+        @Html.ActionLink("Create New Request", "Create", null, new { @class = "btn-create" })
+    </p>
+
+    <table>
+        <tr>
+            <th>Request ID</th>
+            <th>Student Name</th>
+            <th>Department</th>
+            <th>Service Type</th>
+            <th>Description</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+        </tr>
+
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.RequestId</td>
+                <td>@item.StudentName</td>
+                <td>@item.Department</td>
+                <td>@item.ServiceType</td>
+                <td>@item.Description</td>
+                <td>@item.Priority</td>
+                <td class="status-@item.Status.Replace(" ", "-")">@item.Status</td>
+                <td>@item.RequestDate.ToString("yyyy-MM-dd HH:mm")</td>
+                <td>
+                    @Html.ActionLink("Update Status", "UpdateStatus", new { id =
+                        item.RequestId }, new { @class = "action-link" })
+                </td>
+            </tr>
+        }
+    </table>
+</body>
+</html>
+
+===== Views/ServiceRequest/Create.cshtml =====
+@model SmartCampusPortal.Models.ServiceRequest
+
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Campus Service Request</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background-color: #fdfdfd; color: #333; }
+        h2 { color: #003366; border-bottom: 2px solid #003366; padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input[type="text"], textarea, select { width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 80px; }
+        input[type="submit"] { padding: 10px 20px; background-color: #0066cc; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        input[type="submit"]:hover { background-color: #004c99; }
+        .field-validation-error { color: #d9534f; font-size: 0.9em; display: block; margin-top: 4px; }
+        a { color: #0066cc; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h2>Create Campus Service Request</h2>
+
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-group">
+            <label>Student Name</label>
+            @Html.TextBoxFor(m => m.StudentName)
+            @Html.ValidationMessageFor(m => m.StudentName)
+        </div>
+
+        <div class="form-group">
+            <label>Department</label>
+            @Html.TextBoxFor(m => m.Department)
+            @Html.ValidationMessageFor(m => m.Department)
+        </div>
+
+        <div class="form-group">
+            <label>Service Type</label>
+            @Html.DropDownListFor(m => m.ServiceType,
+                new SelectList(new[]
+                {
+                    "IT Support",
+                    "Library",
+                    "Maintenance",
+                    "Transport"
+                }))
+            @Html.ValidationMessageFor(m => m.ServiceType)
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            @Html.TextAreaFor(m => m.Description)
+            @Html.ValidationMessageFor(m => m.Description)
+        </div>
+
+        <div class="form-group">
+            <label>Priority</label>
+            @Html.DropDownListFor(m => m.Priority,
+                new SelectList(new[]
+                {
+                    "Low",
+                    "Medium",
+                    "High"
+                }))
+        </div>
+
+        <br />
+        <input type="submit" value="Submit Request" />
+    }
+
+    <p style="margin-top: 20px;">
+        @Html.ActionLink("Back to List", "Index")
+    </p>
+</body>
+</html>
+
+===== Views/ServiceRequest/UpdateStatus.cshtml =====
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Update Request Status</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background-color: #fdfdfd; color: #333; }
+        h2 { color: #003366; border-bottom: 2px solid #003366; padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        select { width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input[type="submit"] { padding: 10px 20px; background-color: #0066cc; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        input[type="submit"]:hover { background-color: #004c99; }
+        a { color: #0066cc; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h2>Update Request Status (Request ID: @ViewBag.RequestId)</h2>
+
+    @using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <input type="hidden"
+               name="id"
+               value="@ViewBag.RequestId" />
+
+        <div class="form-group">
+            <label>Select New Status</label>
+            @Html.DropDownList("status",
+                new SelectList(new[]
+                {
+                    "Pending",
+                    "In Progress",
+                    "Completed"
+                }))
+        </div>
+        <br />
+        <input type="submit" value="Update Status" />
+    }
+
+    <p style="margin-top: 20px;">
+        @Html.ActionLink("Back to List", "Index")
+    </p>
+</body>
+</html>
+
+===== Web.config =====
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <connectionStrings>
+        <add name="CampusConnection" connectionString="Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=SmartCampusDB;Integrated Security=True" providerName="System.Data.SqlClient" />
+    </connectionStrings>
+    <appSettings>
+        <add key="webpages:Version" value="3.0.0.0" />
+        <add key="webpages:Enabled" value="false" />
+        <add key="ClientValidationEnabled" value="true" />
+        <add key="UnobtrusiveJavaScriptEnabled" value="true" />
+    </appSettings>
+    <system.web>
+        <compilation debug="true" targetFramework="4.7.2">
+            <assemblies>
+                <add assembly="System.Runtime, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+            </assemblies>
+        </compilation>
+        <httpRuntime targetFramework="4.7.2" />
+    </system.web>
+    <system.webServer>
+        <handlers>
+            <remove name="ExtensionlessUrlHandler-Integrated-4.0" />
+            <remove name="OPTIONSVerbHandler" />
+            <remove name="TRACEVerbHandler" />
+            <add name="ExtensionlessUrlHandler-Integrated-4.0" path="*." verb="*" type="System.Web.Handlers.TransferRequestHandler" preCondition="integratedMode,runtimeVersionv4.0" />
+        </handlers>
+    </system.webServer>
+    <runtime>
+        <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+            <dependentAssembly>
+                <assemblyIdentity name="Microsoft.Web.Infrastructure" publicKeyToken="31bf3856ad364e35" culture="neutral" />
+                <bindingRedirect oldVersion="0.0.0.0-2.0.0.0" newVersion="2.0.0.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="Newtonsoft.Json" publicKeyToken="30ad4fe6b2a6aeed" />
+                <bindingRedirect oldVersion="0.0.0.0-13.0.0.0" newVersion="13.0.0.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="System.Web.Helpers" publicKeyToken="31bf3856ad364e35" />
+                <bindingRedirect oldVersion="1.0.0.0-3.0.0.0" newVersion="3.0.0.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="System.Web.WebPages" publicKeyToken="31bf3856ad364e35" />
+                <bindingRedirect oldVersion="1.0.0.0-3.0.0.0" newVersion="3.0.0.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="System.Web.Mvc" publicKeyToken="31bf3856ad364e35" />
+                <bindingRedirect oldVersion="1.0.0.0-5.2.9.0" newVersion="5.2.9.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="System.Web.Http" publicKeyToken="31bf3856ad364e35" culture="neutral" />
+                <bindingRedirect oldVersion="0.0.0.0-5.2.9.0" newVersion="5.2.9.0" />
+            </dependentAssembly>
+            <dependentAssembly>
+                <assemblyIdentity name="System.Net.Http.Formatting" publicKeyToken="31bf3856ad364e35" culture="neutral" />
+                <bindingRedirect oldVersion="0.0.0.0-5.2.9.0" newVersion="5.2.9.0" />
+            </dependentAssembly>
+        </assemblyBinding>
+    </runtime>
+</configuration>
+
